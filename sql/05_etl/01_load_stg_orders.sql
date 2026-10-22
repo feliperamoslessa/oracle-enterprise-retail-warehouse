@@ -101,7 +101,12 @@ EXCEPTION
             IF v_error_code NOT IN (-20001, -20002) THEN
                 BEGIN
                     log_etl_error(
-                        p_batch_id       => p_batch_id,
+                        
+p_batch_id => CASE
+    WHEN v_error_code = 100 THEN NULL
+    ELSE p_batch_id
+END,
+
                         p_procedure_name => 'LOAD_STG_ORDERS',
                         p_error_code     => v_error_code,
                         p_error_message  => v_error_message
