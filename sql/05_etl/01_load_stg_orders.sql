@@ -86,10 +86,35 @@ BEGIN
     WHERE batch_id = p_batch_id;
 
     COMMIT;
-
+ 
 EXCEPTION
     WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
+        DECLARE
+            v_error_code NUMBER := SQLCODE;
+            v_error_message VARCHAR2(4000) := SQLERRM;
+        BEGIN
+            -- Desfaz alteracoes da carga
+            ROLLBACK;
+
+            -- Nao registra reprocessamento bloqueado
+            -- como falha operacional
+            IF v_error_code NOT IN (-20001, -20002) THEN
+                BEGIN
+                    log_etl_error(
+                        p_batch_id       => p_batch_id,
+                        p_procedure_name => 'LOAD_STG_ORDERS',
+                        p_error_code     => v_error_code,
+                        p_error_message  => v_error_message
+                    );
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        NULL; -- Preserva o erro original
+                END;
+            END IF;
+
+            -- Devolve o erro ao chamador
+            RAISE;
+        END;
 END;
 /
+
